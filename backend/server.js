@@ -7,7 +7,6 @@ dotenv.config();
 
 const { connectDB } = require('./config/db');
 
-// Import models to register them with Sequelize before sync
 require('./models/User');
 require('./models/Project');
 require('./models/Task');
@@ -16,23 +15,26 @@ connectDB();
 
 const app = express();
 
-// Middleware
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  origin: '*',
   credentials: true
 }));
 app.use(express.json());
 app.use(morgan('dev'));
 
-// Routes
+// API Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/projects', require('./routes/projects'));
 app.use('/api/tasks', require('./routes/tasks'));
 app.use('/api/users', require('./routes/users'));
 
-// Health check
-app.get('/api', (req, res) => {
-  res.json({ message: 'Team Task Manager API is running!', status: 'OK' });
+// Serve frontend static files
+const frontendBuild = path.join(__dirname, '..', 'frontend', 'build');
+app.use(express.static(frontendBuild));
+
+// All other routes serve the frontend
+app.get('*', (req, res) => {
+  res.sendFile(path.join(frontendBuild, 'index.html'));
 });
 
 // Global error handler
@@ -42,12 +44,6 @@ app.use((err, req, res, next) => {
     success: false,
     message: err.message || 'Server Error'
   });
-});
-
-// Serve frontend
-app.use(express.static(path.join(__dirname, '../frontend/build')));
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/build', 'index.html'));
 });
 
 const PORT = process.env.PORT || 5000;
